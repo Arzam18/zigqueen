@@ -70,7 +70,7 @@ was done on a single desktop machine:
 | OS | Windows 11 with WSL2 (Ubuntu) — training and testing run under WSL2; Windows binaries are cross-compiled with Zig |
 
 No cluster, no distributed testing framework, and no external compute: the
-network trains on the one GPU (a full run is ~2-3 days), and the gauntlets
+network trains on the one GPU (about 30 hours for the shipped net), and the gauntlets
 and SPRT matches run on the same box's CPU cores. (The only exception is
 the published release binaries, which are built by GitHub Actions so that
 anyone can reproduce them from the tagged source.)
