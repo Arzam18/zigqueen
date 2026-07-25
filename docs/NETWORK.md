@@ -9,14 +9,16 @@ detail that a reader can judge it for themselves.
 | **Trainer** | [bullet](https://github.com/jw1912/bullet), extended by the author for this feature set |
 | **Architecture** | King-bucketed HalfKA inputs + threat features + PSQT head + bucketed layer stack; dimensions and feature set are the author's |
 | **Weights** | Trained from random initialisation |
-| **Training run** | 2,200 superbatches (~220 billion positions seen), one RTX 4090, ~30 hours |
+| **Training run** | 2,200 superbatches of 100M samples — about 2.2 passes over the data — on one RTX 4090, ~30 hours |
 | **Engine inference** | Written from scratch in Zig; validated bit-for-bit against an independent reference |
 
 ## Training data
 
 The Stockfish project and its contributors publish their NNUE training data
 openly. zigqueen's network is trained on a 27-component selection of those
-sets — about 280 GiB, roughly 104 billion usable positions — drawn from:
+sets — about 280 GiB and roughly 108 billion positions, of which around 10%
+(tablebase- and mate-scored entries) are skipped by the standard filter,
+leaving ~98 billion usable — drawn from:
 
 - [`official-stockfish/master-binpacks`](https://huggingface.co/official-stockfish/master-binpacks)
   — the data used for Stockfish's own master networks
@@ -63,8 +65,10 @@ specific configuration is:
 ## The training run
 
 The shipped network was trained from random initialisation for 2,200
-superbatches of 100M positions — about 220 billion positions processed, or
-roughly two passes over the dataset — taking about 30 hours on one RTX 4090.
+superbatches of 100M samples each. That is ~220 billion training samples
+drawn, which over a corpus of ~98 billion usable positions means the network
+saw the data about 2.2 times, not 220 billion distinct positions. The run took
+about 30 hours on one RTX 4090.
 
 Before any network is allowed to cost testing time it must pass a sanity gate:
 colour-mirrored positions must evaluate to ~0, and material must be ordered
