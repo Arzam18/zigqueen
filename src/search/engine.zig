@@ -224,6 +224,28 @@ pub const Engine = struct {
             return best;
         }
 
+        // Root DTZ probe (rule-50-aware): in a TB-covered WINNING root, play
+        // Fathom's DTZ-optimal move directly — search cannot outplay the table,
+        // and pawnless wins (KBN vs K et al.) are invisible to the in-search
+        // WDL probe (no zeroing move ever resets the clock, so its rule-50
+        // gate never opens). Draws/losses fall through to the normal search:
+        // against imperfect opposition the search keeps practical chances
+        // that "any TB-optimal move" would forfeit.
+        if (syzygy.probeRoot(&working)) |tbv| {
+            if (tbv.win) {
+                if (matchLegalMove(&working, tbv)) |mv| {
+                    best.best_move = mv;
+                    best.score = syzygy.TB_WIN_SCORE - @as(types.Score, @intCast(@min(tbv.dtz, 1000)));
+                    best.depth = 1;
+                    best.seldepth = 1;
+                    best.nodes = 1;
+                    best.pv.push(mv);
+                    best.diagnostics.stats = ctx.stats;
+                    return best;
+                }
+            }
+        }
+
 
         const max_depth = limits.depth orelse 64;
         var previous_trace: ?IterationTrace = null;
@@ -383,6 +405,31 @@ fn widenAspirationWindow(guess: i32, alpha: *i32, beta: *i32, delta: *i32, score
         return;
     }
     beta.* = @min(qsearch.INF, guess + delta.*);
+}
+
+/// Find the legal move matching a Fathom root-probe verdict (from/to squares
+/// plus promotion piece). Null if no legal move matches — the caller then
+/// falls through to the normal search rather than trusting the probe.
+fn matchLegalMove(pos: *const position.Position, tbv: syzygy.RootVerdict) ?move_mod.Move {
+    var moves = move_mod.MoveList.init();
+    legal.generate(pos, &moves);
+    for (moves.slice()) |mv| {
+        if (mv.from.index() != tbv.from or mv.to.index() != tbv.to) continue;
+        const want_promo: ?piece.PieceType = switch (tbv.promo) {
+            1 => .queen,
+            2 => .rook,
+            3 => .bishop,
+            4 => .knight,
+            else => null,
+        };
+        const have_promo = mv.promotionPieceType();
+        if ((want_promo == null) != (have_promo == null)) continue;
+        if (want_promo) |wp| {
+            if (have_promo.? != wp) continue;
+        }
+        return mv;
+    }
+    return null;
 }
 
 fn fallbackMove(pos: *const position.Position, prefer_repetition_safe: bool, cycle_child_key: ?u64) ?move_mod.Move {

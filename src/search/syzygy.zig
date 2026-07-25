@@ -22,6 +22,21 @@ extern fn tb_probe_wdl_impl(
     turn: bool,
 ) c_uint;
 
+extern fn tb_probe_root_impl(
+    white: u64,
+    black: u64,
+    kings: u64,
+    queens: u64,
+    rooks: u64,
+    bishops: u64,
+    knights: u64,
+    pawns: u64,
+    rule50: c_uint,
+    ep: c_uint,
+    turn: bool,
+    results: ?[*]c_uint,
+) c_uint;
+
 const TB_LOSS: c_uint = 0;
 const TB_BLESSED_LOSS: c_uint = 1;
 const TB_DRAW: c_uint = 2;
@@ -90,6 +105,58 @@ pub fn probeWdl(pos: *const position.Position) ?Wdl {
         TB_LOSS => .loss,
         TB_DRAW, TB_CURSED_WIN, TB_BLESSED_LOSS => .draw,
         else => null,
+    };
+}
+
+/// Root DTZ verdict: Fathom's suggested move for a TB-covered root position.
+/// `promo` uses Fathom's encoding (0 none, 1 Q, 2 R, 3 B, 4 N). Unlike the
+/// in-search WDL probe this is rule-50-AWARE (the clock is passed through),
+/// so it works in pawnless endings where no move can ever zero the clock —
+/// exactly the class (e.g. KBN vs K) the WDL gate can never reach.
+pub const RootVerdict = struct {
+    from: u6,
+    to: u6,
+    promo: u3,
+    win: bool, // true only for a genuine win (cursed wins collapse to non-win)
+    dtz: u32,
+};
+
+/// Root probe. Null when disabled, out of scope (piece count/castling), the
+/// probe fails, or the position is already checkmate/stalemate (those return
+/// sentinel "moves" with from == to that a legal-move match would reject
+/// anyway; the normal search handles terminal roots).
+pub fn probeRoot(pos: *const position.Position) ?RootVerdict {
+    if (!initialized) return null;
+    if (@popCount(pos.occupied) > largest) return null;
+    const cr = pos.castling_rights;
+    if (cr.white_king_side or cr.white_queen_side or cr.black_king_side or cr.black_queen_side) return null;
+
+    const ep: c_uint = if (pos.en_passant) |sq| @intFromEnum(sq) else 0;
+    const result = tb_probe_root_impl(
+        pos.occupancyFor(.white),
+        pos.occupancyFor(.black),
+        pos.pieceBitboard(.white, .king) | pos.pieceBitboard(.black, .king),
+        pos.pieceBitboard(.white, .queen) | pos.pieceBitboard(.black, .queen),
+        pos.pieceBitboard(.white, .rook) | pos.pieceBitboard(.black, .rook),
+        pos.pieceBitboard(.white, .bishop) | pos.pieceBitboard(.black, .bishop),
+        pos.pieceBitboard(.white, .knight) | pos.pieceBitboard(.black, .knight),
+        pos.pieceBitboard(.white, .pawn) | pos.pieceBitboard(.black, .pawn),
+        pos.halfmove_clock,
+        ep,
+        pos.side_to_move == .white,
+        null,
+    );
+    if (result == TB_RESULT_FAILED) return null;
+    const wdl: c_uint = result & 0xF;
+    const to: u6 = @intCast((result >> 4) & 0x3F);
+    const from: u6 = @intCast((result >> 10) & 0x3F);
+    if (from == to) return null; // checkmate/stalemate sentinels
+    return .{
+        .from = from,
+        .to = to,
+        .promo = @intCast((result >> 16) & 0x7),
+        .win = wdl == TB_WIN,
+        .dtz = (result >> 20) & 0xFFF,
     };
 }
 
