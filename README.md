@@ -67,11 +67,13 @@ was done on a single desktop machine:
 | CPU | AMD Ryzen 9 9950X3D (16 cores / 32 threads, 128 MB V-cache) |
 | GPU | NVIDIA GeForce RTX 4090 (24 GB) — NNUE training only |
 | RAM | 128 GB |
-| OS | Windows 11 with WSL2 (Ubuntu) for training and testing; native Windows builds are cross-compiled |
+| OS | Windows 11 with WSL2 (Ubuntu) — training and testing run under WSL2; Windows binaries are cross-compiled with Zig |
 
 No cluster, no distributed testing framework, and no external compute: the
 network trains on the one GPU (a full run is ~2-3 days), and the gauntlets
-and SPRT matches run on the same box's CPU cores.
+and SPRT matches run on the same box's CPU cores. (The only exception is
+the published release binaries, which are built by GitHub Actions so that
+anyone can reproduce them from the tagged source.)
 
 ## Features
 
