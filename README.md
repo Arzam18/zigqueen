@@ -7,17 +7,44 @@ NNUE evaluation and a single-threaded alpha-beta search. Engine code is a
 clean-room implementation (see `CLEAN_ROOM_RULES.md`); the network is trained
 from the publicly published Stockfish NNUE training datasets.
 
-**zigqueen is a human/AI collaboration**: developed by
-[stierms](https://github.com/stierms) (project direction, engineering
-decisions, validation methodology and budgets) working with Anthropic's
-Claude as an AI pair-engineer (implementation, analysis, optimization).
-Every change was gated by empirical validation — statistical game testing
-(SPRT), bit-exactness proofs, and fixed-workload benchmarks — rather than
-taken on trust. Commit trailers preserve the co-authorship record.
-
 Copyright (C) 2026 stierms — licensed under GPLv3 (see `LICENSE`). The
 vendored Fathom tablebase prober (`deps/fathom`) is distributed under its own
 MIT-style license, kept intact in its source headers.
+
+## How this engine was built (AI disclosure)
+
+zigqueen was written by [stierms](https://github.com/stierms) together with
+an AI assistant (Anthropic's Claude), and it is worth being specific about
+what that means, because "AI-written" can mean very different things.
+
+Claude wrote most of the source code. It did so under continuous human
+direction: stierms set the goals, chose which ideas to pursue or abandon,
+approved every experiment that cost machine time, and decided what shipped.
+Neither party worked unsupervised — the AI proposed and implemented, the
+human steered, questioned, and vetoed.
+
+Crucially, nothing was accepted because it sounded plausible. Every change
+had to survive measurement before it entered the engine:
+
+- **Strength claims** were decided by SPRT self-play matches (thousands of
+  games), then re-checked at a deploy-relevant time control, then sanity-
+  checked against outside engines. Several changes that looked good in
+  theory — and a few that looked good at fast time controls — were measured,
+  found wanting, and reverted.
+- **Performance claims** had to be *node-identical*: the optimized engine
+  must search exactly the same tree as before, proven by matching node counts
+  and principal variations at fixed depth, with timings taken as the minimum
+  of repeated runs on an idle machine.
+- **Correctness** rests on perft suites, make/unmake invariants, and
+  bit-exactness checks of the NNUE inference against an independent
+  reference implementation of the trainer's arithmetic.
+
+The failed experiments are as much a part of the record as the successful
+ones; the git history and `docs/` describe both. Commit trailers preserve
+the co-authorship attribution.
+
+`CLEAN_ROOM_RULES.md` documents the originality rules the project was
+developed under — no code was copied or translated from other engines.
 
 ## Strength
 
@@ -29,6 +56,22 @@ MIT-style license, kept intact in its source headers.
 
 The self-assessment anchors a private gauntlet to published CCRL Blitz
 ratings; treat it as an estimate (~±15).
+
+## Development hardware
+
+Everything — engine development, NNUE training, and all strength testing —
+was done on a single desktop machine:
+
+| | |
+|---|---|
+| CPU | AMD Ryzen 9 9950X3D (16 cores / 32 threads, 128 MB V-cache) |
+| GPU | NVIDIA GeForce RTX 4090 (24 GB) — NNUE training only |
+| RAM | 128 GB |
+| OS | Windows 11 with WSL2 (Ubuntu) for training and testing; native Windows builds are cross-compiled |
+
+No cluster, no distributed testing framework, and no external compute: the
+network trains on the one GPU (a full run is ~2-3 days), and the gauntlets
+and SPRT matches run on the same box's CPU cores.
 
 ## Features
 
