@@ -87,7 +87,8 @@ anyone can reproduce them from the tagged source.)
 - incremental accumulators with lazy materialization and a finny-style
   refresh cache
 - trained with the [bullet](https://github.com/jw1912/bullet) trainer on
-  the publicly published Stockfish NNUE training datasets
+  the publicly published Stockfish NNUE training datasets — see
+  [docs/NETWORK.md](docs/NETWORK.md) for exactly what was and was not used
 
 **Search** — negamax + iterative deepening, aspiration windows:
 

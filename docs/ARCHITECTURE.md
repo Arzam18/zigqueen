@@ -90,7 +90,8 @@ across targets.
 
 The net is trained with the [bullet](https://github.com/jw1912/bullet)
 trainer on the publicly published Stockfish NNUE training datasets
-(relabeled played-out game positions); the engine-side
+(relabeled played-out game positions) — [NETWORK.md](NETWORK.md) documents
+the data, trainer and provenance in detail; the engine-side
 mapping is validated bit-for-bit against a trainer-faithful reference.
 
 ## Search
