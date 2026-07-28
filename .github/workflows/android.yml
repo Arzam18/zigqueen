@@ -58,7 +58,7 @@ jobs:
 
       - name: Build for Android ARM64
         run: |
-          zig build -Dtarget=aarch64-linux-android \
+          zig build -Dtarget=aarch64-linux-android28 \
                      -Doptimize=ReleaseFast \
                      --sysroot "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
 
