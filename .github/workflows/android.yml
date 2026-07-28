@@ -12,11 +12,37 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Zig
+      - name: Show build.zig.zon
         run: |
-          wget -q https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz
-          tar -xf zig-linux-x86_64-0.13.0.tar.xz
-          echo "$PWD/zig-linux-x86_64-0.13.0" >> $GITHUB_PATH
+          if [ -f build.zig.zon ]; then
+            echo "----- build.zig.zon -----"
+            cat build.zig.zon
+            echo "--------------------------"
+          else
+            echo "No build.zig.zon found"
+          fi
+
+      - name: Install Zig (latest stable)
+        run: |
+          ZIG_JSON=$(curl -sL https://ziglang.org/download/index.json)
+          ZIG_URL=$(echo "$ZIG_JSON" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          keys = [k for k in data.keys() if k != 'master']
+          keys.sort(key=lambda v: [int(x) for x in v.split('.')])
+          latest_stable = keys[-1] if keys else None
+          version = latest_stable or 'master'
+          print(data[version]['x86_64-linux']['tarball'])
+          ")
+          echo "Downloading Zig from: $ZIG_URL"
+          wget -q "$ZIG_URL" -O zig.tar.xz
+          mkdir zig-toolchain
+          tar -xf zig.tar.xz -C zig-toolchain --strip-components=1
+          echo "$PWD/zig-toolchain" >> $GITHUB_PATH
+
+      - name: Show Zig version
+        run: |
+          zig version
 
       - name: Build for Android ARM64
         run: |
