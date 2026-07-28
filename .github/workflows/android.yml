@@ -1,6 +1,7 @@
 name: Zigqueen
 
 on:
+  push:
   workflow_dispatch:
 
 permissions:
@@ -43,6 +44,11 @@ jobs:
       - name: Show Zig version
         run: |
           zig version
+
+      - name: Patch build.zig for compatibility
+        run: |
+          sed -i '/exe\.want_lto = true;/d' build.zig
+          sed -i '/if (target\.result\.os\.tag == \.linux) exe\.link_emit_relocs = true;/d' build.zig
 
       - name: Build for Android ARM64
         run: |
