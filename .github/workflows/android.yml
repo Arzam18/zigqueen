@@ -1,0 +1,43 @@
+name: Zigqueen
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Zig
+        run: |
+          wget -q https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz
+          tar -xf zig-linux-x86_64-0.13.0.tar.xz
+          echo "$PWD/zig-linux-x86_64-0.13.0" >> $GITHUB_PATH
+
+      - name: Build for Android ARM64
+        run: |
+          zig build -Dtarget=aarch64-linux-android -Doptimize=ReleaseFast
+
+      - name: List build output
+        run: |
+          find zig-out -type f -executable
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zigqueen-android-arm64
+          path: zig-out/bin/*
+
+      - name: Create prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-build-${{ github.run_number }}
+          name: Zigqueen Build ${{ github.run_number }}
+          prerelease: true
+          files: zig-out/bin/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
